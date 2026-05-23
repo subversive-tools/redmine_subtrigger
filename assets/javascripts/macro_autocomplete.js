@@ -2,91 +2,77 @@
   'use strict';
 
   var MACROS = [];
-
-  // ── DOM elements ─────────────────────────────────────────────────────────────
-
-  var dropdown  = null;
-  var macList   = null;
-  var macDetail = null;
+  var dropdown, macList, macDetail;
+  var selectedIndex = -1;
   var activeTextarea = null;
-  var selectedIndex  = -1;
+
+  // ── Create DOM ──────────────────────────────────────────────────────────────
 
   function createDropdown() {
-    var el = document.createElement('div');
-    el.id = 'macro-autocomplete';
-    el.setAttribute('role', 'listbox');
-    el.style.display = 'none';
+    var d = document.createElement('div');
+    // Reuse Redmine's existing .tribute-container styles (tribute-5.1.3.css + application.css)
+    d.className = 'tribute-container subcomplete-container';
+    d.style.display = 'none';
+    d.setAttribute('role', 'listbox');
 
-    macList   = document.createElement('div');
-    macList.className = 'mac-list';
+    macList = document.createElement('ul');
+    d.appendChild(macList);
 
     macDetail = document.createElement('div');
-    macDetail.className = 'mac-detail';
+    macDetail.className = 'subcomplete-detail';
     macDetail.style.display = 'none';
+    d.appendChild(macDetail);
 
-    el.appendChild(macList);
-    el.appendChild(macDetail);
-    document.body.appendChild(el);
-
-    el.addEventListener('mousedown', function (e) {
-      e.preventDefault(); // keep textarea focused
-    });
-
-    return el;
+    document.body.appendChild(d);
+    return d;
   }
 
-  // ── Attach to a textarea ────────────────────────────────────────────────────
+  // ── Attach to textarea ───────────────────────────────────────────────────────
 
   function attach(textarea) {
-    textarea.addEventListener('input', onInput);
-    textarea.addEventListener('keydown', onKeydown);
+    if (textarea._subcompleteBound) return;
+    textarea._subcompleteBound = true;
+
+    textarea.addEventListener('input', function () { onInput(this); });
+    textarea.addEventListener('keydown', onKeydown.bind(textarea));
     textarea.addEventListener('blur', function () {
       setTimeout(hide, 150);
     });
-    textarea.addEventListener('click', onInput);
   }
 
-  function onInput() {
-    activeTextarea = this;
-    var query = getQuery(this);
-    if (query === null) { hide(); return; }
-    render(query);
+  function onInput(textarea) {
+    activeTextarea = textarea;
+    var val    = textarea.value;
+    var pos    = textarea.selectionStart;
+    var before = val.substring(0, pos);
+    var m      = before.match(/\{\{(\w*)$/);
+    if (!m) { hide(); return; }
+    render(m[1], textarea);
   }
 
-  // ── Query extraction ────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
-  function getQuery(textarea) {
-    var before = textarea.value.substring(0, textarea.selectionStart);
-    // Allow non-}} chars after the name so the dropdown stays open while typing args
-    var m = before.match(/\{\{(\w*)([^}]*)$/);
-    return m ? m[1].toLowerCase() : null;
-  }
-
-  // ── Rendering ───────────────────────────────────────────────────────────────
-
-  function render(query) {
+  function render(query, textarea) {
     var filtered = MACROS.filter(function (m) {
       return m.name.indexOf(query) === 0;
     });
 
     if (filtered.length === 0) { hide(); return; }
 
-    macList.innerHTML = filtered.map(function (m) {
-      return '<div class="mac-item" role="option"' +
+    macList.innerHTML = filtered.map(function (m, i) {
+      return '<li data-index="' + i + '"' +
                ' data-macro="' + esc(m.name) + '"' +
-               ' data-detail="' + esc(m.detail || m.desc || '') + '">' +
-               '<span class="mac-name">{{' + esc(m.name) + '}}</span>' +
-               (m.desc ? '<span class="mac-desc">' + esc(truncate(m.desc, 72)) + '</span>' : '') +
-             '</div>';
+               ' data-detail="' + esc(m.detail || m.desc || '') + '"' +
+               ' role="option">' +
+               '<span>{{' + esc(m.name) + '}}</span>' +
+               (m.desc ? ' <em>' + esc(truncate(m.desc, 72)) + '</em>' : '') +
+             '</li>';
     }).join('');
 
-    macList.querySelectorAll('.mac-item').forEach(function (item) {
+    macList.querySelectorAll('li').forEach(function (item) {
       item.addEventListener('mouseenter', function () {
-        var items = macList.querySelectorAll('.mac-item');
-        items.forEach(function (i, idx) {
-          if (i === item) selectedIndex = idx;
-        });
-        updateHighlight(items);
+        selectedIndex = parseInt(this.dataset.index);
+        updateHighlight(macList.querySelectorAll('li'));
       });
 
       item.addEventListener('mousedown', function (e) {
@@ -101,25 +87,25 @@
     macDetail.textContent   = '';
     selectedIndex = -1;
 
-    // Auto-select and show detail when the query is an exact macro name
+    // Auto-select when query matches exactly one macro
     if (filtered.length === 1 && filtered[0].name === query) {
       selectedIndex = 0;
     }
 
-    position(activeTextarea);
+    position(textarea);
     dropdown.style.display = 'block';
 
     if (selectedIndex >= 0) {
-      updateHighlight(macList.querySelectorAll('.mac-item'));
+      updateHighlight(macList.querySelectorAll('li'));
     }
   }
 
-  // ── Keyboard handling ───────────────────────────────────────────────────────
+  // ── Keyboard handling ────────────────────────────────────────────────────────
 
   function onKeydown(e) {
     if (dropdown.style.display === 'none') return;
 
-    var items = macList.querySelectorAll('.mac-item');
+    var items = macList.querySelectorAll('li');
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -150,7 +136,7 @@
   function updateHighlight(items) {
     items.forEach(function (item, i) {
       var selected = i === selectedIndex;
-      item.classList.toggle('mac-selected', selected);
+      item.classList.toggle('highlight', selected);
       item.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
 
@@ -163,7 +149,7 @@
     }
   }
 
-  // ── Detail panel ────────────────────────────────────────────────────────────
+  // ── Detail panel ─────────────────────────────────────────────────────────────
 
   function showDetail(text) {
     if (!text) { hideDetail(); return; }
@@ -176,7 +162,7 @@
     macDetail.textContent   = '';
   }
 
-  // ── Macro insertion ─────────────────────────────────────────────────────────
+  // ── Macro insertion ──────────────────────────────────────────────────────────
 
   function insertMacro(textarea, name) {
     var val    = textarea.value;
@@ -196,7 +182,7 @@
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // ── Positioning (mirror-div technique) ──────────────────────────────────────
+  // ── Positioning (mirror-div technique) ───────────────────────────────────────
 
   function position(textarea) {
     var cursorPos = measureCursorOffset(textarea);
@@ -207,7 +193,7 @@
     var left = taRect.left + scrollX + cursorPos.left;
     var top  = taRect.top  + scrollY + cursorPos.top + cursorPos.lineHeight + 2;
 
-    var maxLeft = scrollX + window.innerWidth - 360;
+    var maxLeft = scrollX + window.innerWidth - 380;
     left = Math.min(left, maxLeft);
 
     dropdown.style.left = left + 'px';
@@ -216,15 +202,14 @@
 
   function measureCursorOffset(textarea) {
     var style = window.getComputedStyle(textarea);
+    var props = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+                 'letterSpacing', 'lineHeight', 'textTransform',
+                 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+                 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+                 'boxSizing', 'wordWrap', 'overflowWrap', 'whiteSpace'];
 
     var mirror = document.createElement('div');
-    var props  = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
-                  'letterSpacing', 'lineHeight', 'textTransform',
-                  'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-                  'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-                  'boxSizing', 'wordWrap', 'overflowWrap', 'whiteSpace'];
     props.forEach(function (p) { mirror.style[p] = style[p]; });
-
     mirror.style.position   = 'absolute';
     mirror.style.visibility = 'hidden';
     mirror.style.top        = '-9999px';
@@ -233,11 +218,10 @@
     mirror.style.height     = 'auto';
     mirror.style.overflow   = 'hidden';
     mirror.style.whiteSpace = 'pre-wrap';
-
-    mirror.textContent = textarea.value.substring(0, textarea.selectionStart);
+    mirror.textContent      = textarea.value.substring(0, textarea.selectionStart);
 
     var cursor = document.createElement('span');
-    cursor.textContent = '​'; // zero-width space
+    cursor.textContent = '\u200b'; // zero-width space
     mirror.appendChild(cursor);
     document.body.appendChild(mirror);
 
@@ -247,12 +231,11 @@
       top:        cursor.offsetTop  - textarea.scrollTop,
       lineHeight: lineHeight
     };
-
     document.body.removeChild(mirror);
     return result;
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   function hide() {
     dropdown.style.display = 'none';
@@ -272,7 +255,7 @@
     return str.length > len ? str.substring(0, len) + '…' : str;
   }
 
-  // ── Init ────────────────────────────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────────
 
   function init() {
     MACROS = (window.REDMINE_MACROS || []);
@@ -282,6 +265,7 @@
 
     document.querySelectorAll('textarea.wiki-edit').forEach(attach);
 
+    // Watch for dynamically added textareas (e.g. preview toggle)
     var observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
         m.addedNodes.forEach(function (node) {
