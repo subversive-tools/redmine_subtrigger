@@ -1,0 +1,62 @@
+/* redmine_subcomplete — Macro Autocomplete Dropdown */
+
+#macro-autocomplete {
+  position: absolute;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 360px;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.mac-list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.mac-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 2px;
+}
+
+.mac-item:last-child {
+  border-bottom: none;
+}
+
+.mac-item:hover,
+.mac-item.mac-selected {
+  background-color: #e8f0fe;
+}
+
+.mac-name {
+  color: #1a56a0;
+  font-weight: 600;
+}
+
+.mac-desc {
+  font-size: 0.85em;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mac-detail {
+  border-top: 1px solid #ddd;
+  padding: 8px 10px;
+  font-size: 0.82em;
+  color: #444;
+  background: #f8f8f8;
+  white-space: pre-wrap;
+  max-height: 140px;
+  overflow-y: auto;
+  border-radius: 0 0 4px 4px;
+  line-height: 1.5;
+}
