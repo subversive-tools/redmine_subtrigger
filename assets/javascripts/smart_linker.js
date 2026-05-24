@@ -1059,7 +1059,11 @@
           link = '!attachment:' + a.filename + '!';
         }
       } else {
-        link = 'attachment:' + a.filename;
+        if (isMarkdownEditor()) {
+          link = '[' + a.filename + '](attachment:' + a.filename + ')';
+        } else {
+          link = 'attachment:' + a.filename;
+        }
       }
       return { icon: isImg ? 'image-png' : 'attachment', label: a.filename, sub: link, autotext: a.filename, link: link };
     });
@@ -1148,7 +1152,11 @@
           link = '!attachment:' + f.filename + '!';
         }
       } else {
-        link = 'attachment:' + f.filename;
+        if (isMarkdownEditor()) {
+          link = '[' + f.filename + '](attachment:' + f.filename + ')';
+        } else {
+          link = 'attachment:' + f.filename;
+        }
       }
       return { icon: isImg ? 'image-png' : 'attachment', label: f.filename, sub: link, autotext: f.filename, link: link };
     });
@@ -1622,7 +1630,11 @@
       }
       
       var m;
-      if ((m = url.match(/\/projects\/([^\/]+)\/wiki\/([^\/?#]+)/))) {
+      if (url.indexOf('attachment:') === 0) {
+        subpageKey = 'attachments';
+        subitem = decodeURIComponent(url.substring('attachment:'.length));
+      }
+      else if ((m = url.match(/\/projects\/([^\/]+)\/wiki\/([^\/?#]+)/))) {
         project = m[1];
         subpageKey = 'wiki';
         subitem = decodeURIComponent(m[2]).replace(/_/g, ' ');
