@@ -697,7 +697,7 @@
       var items = filtered.map(function (sp, idx) {
         var linkText = '';
         if (sp.name === 'overview') {
-          linkText = 'project:' + projId;
+          linkText = formatLink(sp.label, '/projects/' + projId);
         } else if (sp.link_pattern) {
           var path = sp.link_pattern;
           if (path.indexOf(':/') !== -1) {
@@ -798,7 +798,7 @@
         if (isMatch) matchedSubpageIdx = idx;
         var subText = '';
         if (sp.name === 'overview') {
-          subText = 'project:' + projId;
+          subText = formatLink(sp.label, '/projects/' + projId);
         } else if (sp.link_pattern) {
           var path = sp.link_pattern;
           if (path.indexOf(':/') !== -1) {
@@ -842,7 +842,7 @@
       var items = subpages.map(function (sp) {
         var linkText = '';
         if (sp.name === 'overview') {
-          linkText = 'project:' + projId;
+          linkText = formatLink(sp.label, '/projects/' + projId);
         } else if (sp.link_pattern) {
           var path = sp.link_pattern;
           if (path.indexOf(':/') !== -1) {
