@@ -1305,13 +1305,9 @@
 
     if (st === 'subpages') {
       if (!item.hasSubmenu) {
-        // Just autocomplete the subpage name in the textarea (do not close/insert)
-        var repl = '>>' + curProj.identifier + '>' + item.label;
-        ta.value = v.substring(0, tStart) + repl + v.substring(tEnd);
-        tEnd = tStart + repl.length;
-        ta.selectionStart = ta.selectionEnd = tEnd;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        ta.focus();
+        if (item.link) {
+          doInsert(item.link);
+        }
         return;
       }
 
@@ -1331,18 +1327,8 @@
     var item = getSelectedItem(3);
     if (!item || item.section || item.disabled) return;
 
-    var ta = activeTa;
-    var v  = ta.value;
-
-    var txt = item.autotext || item.label;
-    if (txt) {
-      var subpageLabel = curSubpage ? getSubpageLabel(curSubpage) : '';
-      var repl = '>>' + curProj.identifier + '>' + subpageLabel + '>' + txt;
-      ta.value = v.substring(0, tStart) + repl + v.substring(tEnd);
-      tEnd = tStart + repl.length;
-      ta.selectionStart = ta.selectionEnd = tEnd;
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-      ta.focus();
+    if (item.link) {
+      doInsert(item.link);
     }
   }
 
