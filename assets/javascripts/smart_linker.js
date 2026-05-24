@@ -1444,8 +1444,245 @@
     }
   }
 
+  /* ── Link Under Cursor Editing ───────────────────────────────────────────── */
+  function getLinkOrTokenAtCursor(ta) {
+    var val = ta.value;
+    var pos = ta.selectionStart;
+    var candidates = [];
+    var match;
+    
+    // Pattern 1: Markdown Link: [Title](URL)
+    var mdRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    while ((match = mdRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'markdown_link',
+          text: match[0],
+          title: match[1],
+          url: match[2],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+    
+    // Pattern 2: Textile Link: "Title":URL
+    var txRegex = /"([^"]+)":([^\s"<>]+)/g;
+    while ((match = txRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'textile_link',
+          text: match[0],
+          title: match[1],
+          url: match[2],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    // Pattern 3: Double Bracket Wiki Link: [[Page]] or [[Project:Page]] or [[Page|Label]]
+    var dbRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+    while ((match = dbRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        var target = match[1];
+        var proj = urlProjId || '';
+        var item = target;
+        var colonIdx = target.indexOf(':');
+        if (colonIdx !== -1) {
+          proj = target.substring(0, colonIdx);
+          item = target.substring(colonIdx + 1);
+        }
+        candidates.push({
+          type: 'double_bracket',
+          text: match[0],
+          target: target,
+          project: proj,
+          subitem: item,
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    // Pattern 4: Attachment image Markdown format: ![](attachment:file.ext)
+    var attMdImgRegex = /!\[\]\(attachment:([^\s)]+)\)/g;
+    while ((match = attMdImgRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'attachment_md_img',
+          text: match[0],
+          filename: match[1],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    // Pattern 5: Attachment image Textile format: !attachment:file.ext!
+    var attTxImgRegex = /!attachment:([^\s!]+)!/g;
+    while ((match = attTxImgRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'attachment_tx_img',
+          text: match[0],
+          filename: match[1],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    // Pattern 6: Raw attachment link: attachment:file.ext
+    var attRawRegex = /\battachment:([^\s!)]+)/g;
+    while ((match = attRawRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'attachment_raw',
+          text: match[0],
+          filename: match[1],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    // Pattern 7: Issue shorthand link: #123 or issue#123
+    var issueRawRegex = /(?:issue)?#(\d+)/g;
+    while ((match = issueRawRegex.exec(val)) !== null) {
+      if (pos >= match.index && pos <= match.index + match[0].length) {
+        candidates.push({
+          type: 'issue_raw',
+          text: match[0],
+          issueId: match[1],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+
+    if (candidates.length === 0) return null;
+    
+    // Sort by length descending, so we get the most specific match
+    candidates.sort(function (a, b) {
+      return b.text.length - a.text.length;
+    });
+    
+    return candidates[0];
+  }
+
+  function parseLinkToQuery(candidate) {
+    var project = urlProjId || '';
+    var subpageKey = '';
+    var subitem = '';
+
+    if (candidate.type === 'issue_raw') {
+      subpageKey = 'issues';
+      subitem = '#' + candidate.issueId;
+    }
+    else if (candidate.type === 'attachment_raw' || candidate.type === 'attachment_md_img' || candidate.type === 'attachment_tx_img') {
+      subpageKey = 'attachments';
+      subitem = candidate.filename;
+    }
+    else if (candidate.type === 'double_bracket') {
+      project = candidate.project;
+      subpageKey = 'wiki';
+      subitem = candidate.subitem;
+    }
+    else {
+      var url = candidate.url;
+      if (url.indexOf(location.origin) === 0) {
+        url = url.substring(location.origin.length);
+      }
+      
+      var m;
+      if ((m = url.match(/\/projects\/([^\/]+)\/wiki\/([^\/?#]+)/))) {
+        project = m[1];
+        subpageKey = 'wiki';
+        subitem = decodeURIComponent(m[2]).replace(/_/g, ' ');
+      }
+      else if ((m = url.match(/\/projects\/([^\/]+)\/wiki\/?$/))) {
+        project = m[1];
+        subpageKey = 'wiki';
+      }
+      else if ((m = url.match(/\/projects\/([^\/]+)\/issues\/(\d+)/))) {
+        project = m[1];
+        subpageKey = 'issues';
+        subitem = '#' + m[2];
+      }
+      else if ((m = url.match(/\/projects\/([^\/]+)\/(issues|activity|files|documents|boards|repository|members)\/?/))) {
+        project = m[1];
+        subpageKey = m[2];
+      }
+      else if ((m = url.match(/\/projects\/([^\/]+)\/?$/))) {
+        project = m[1];
+      }
+      else if ((m = url.match(/\/issues\/(\d+)/))) {
+        subpageKey = 'issues';
+        subitem = '#' + m[1];
+      }
+      else if ((m = url.match(/\/attachments\/(?:download\/\d+\/|)?([^\/?#]+)/))) {
+        subpageKey = 'attachments';
+        subitem = decodeURIComponent(m[1]);
+      }
+    }
+
+    var q = '>>';
+    if (project) {
+      q += project;
+    }
+    
+    if (subpageKey) {
+      var subpageLabel = getSubpageLabel(subpageKey);
+      q += ' > ' + subpageLabel;
+      
+      if (subitem) {
+        q += ' > ' + subitem;
+      } else {
+        q += ' > ';
+      }
+    } else if (project) {
+      q += ' > ';
+    }
+    
+    return q;
+  }
+
+  function editLinkUnderCursor(ta) {
+    var candidate = getLinkOrTokenAtCursor(ta);
+    if (!candidate) return false;
+    
+    var query = parseLinkToQuery(candidate);
+    if (!query) return false;
+    
+    activeTa = ta;
+    
+    var val = ta.value;
+    ignoreInput = true;
+    ta.value = val.substring(0, candidate.start) + query + val.substring(candidate.end);
+    
+    tStart = candidate.start;
+    tEnd = candidate.start + query.length;
+    ta.selectionStart = ta.selectionEnd = tEnd;
+    
+    ignoreInput = false;
+    
+    var e = new Event('input', { bubbles: true });
+    ta.dispatchEvent(e);
+    
+    return true;
+  }
+
   function onTaKeydown(e) {
-    if (st === 'closed' || panel.style.display === 'none') return;
+    var ta = e.target;
+    if (st === 'closed' || panel.style.display === 'none') {
+      if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (editLinkUnderCursor(ta)) {
+          e.preventDefault();
+        }
+      }
+      return;
+    }
 
     var pList = activeCol === 1 ? pList1 : (activeCol === 2 ? pList2 : pList3);
     var lis = pList.querySelectorAll('li[data-idx]');
