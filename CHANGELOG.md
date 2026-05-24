@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.0] - 2026-05-24
+
+### Added
+- **Tab-Triggered Link Editing under Cursor**: Seamless round-trip link editing by pressing `Tab` on any existing hyperlink (Markdown, Textile, Double Brackets, attachments, raw issue/project shorthands) when the panel is closed, instantly popping the Smart Linker open at that exact item.
+- **Robust Breadcrumbs Project Context Detection**: Implemented recursive project lookup searching browser URL pathname, header breadcrumb navigation (`#header h1 a`), and active menu select elements to determine project identifier even on isolated subpages (like `/issues/17`).
+- **Premium Wireframe Outline SVGs**: Integrated delicate monochrome outline SVGs (14px centered in a 20px box) representing all Redmine page categories, matching standard Redmine `/admin` wireframe icons and turning white on hover/focus.
+- **Project Files JSON API loader**: Complete files tab loading in Column 3 querying `/projects/{project_id}/files.json` dynamically.
+- **Markdown Clickable Attachment Hyperlink Upgrade**: Upgraded page attachments and project files to format fully valid clickable markdown links `[filename.ext](attachment:filename.ext)` under Markdown settings.
+- **Project-Specific Shorthand Issue Support**: Scanning parser matches project issue shorthand links like `sandbox#123` and automatically cascades to that project's Ticket column.
+- **Subpage/Attachment Disambiguation**: Intelligently maps German locales to rename duplicate `"Dateien"` labels to `"Anhänge"` (for page attachments) and `"Dateien"` (for project-wide files).
+
+### Changed
+- **Space-free Delimiter Formatting**: Eliminated spaces around the `>` delimiter (e.g. `>>myproject>Tickets>#18`), perfectly matching autocomplete text parsing.
+- **Ticket Dropdown Prefix Cleanup**: Removed redundant project identifier prefixes from ticket list labels in Column 3, displaying clean `#18: Subject` strings.
+- **Leaf-Level Navigation Skip**: Pressing Tab or ArrowRight on leaf items (in Column 3, or Column 2 pages with no submenu) does nothing to keep the typed query pristine, keeping Enter and mouse clicks as the dedicated link finalizers.
+- **Wiki Overview URL Formatting**: Replaced legacy and broken Textile `project:identifier` shorthand links with standard clickable root-relative URLs (`/projects/identifier`).
+
 ## [0.3.0] - 2026-05-24
 
 ### Added
