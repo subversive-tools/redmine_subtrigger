@@ -82,6 +82,7 @@
     members:        {},   // keyed by project identifier
     wiki:           {},   // keyed by project identifier
     attachments:    {},   // keyed by location.pathname
+    files:          {},   // keyed by project identifier
     issues:         {}    // keyed by 'projId:query'
   };
 
@@ -399,7 +400,7 @@
 
   function hasSubitems(subpageName) {
     var norm = findSubpageNormalized(subpageName);
-    return norm === 'issues' || norm === 'wiki' || norm === 'members' || norm === 'attachments';
+    return norm === 'issues' || norm === 'wiki' || norm === 'members' || norm === 'attachments' || norm === 'files';
   }
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -595,7 +596,7 @@
     { name: 'wiki', label: 'Wiki', icon: 'wiki-page', module: 'wiki', link_pattern: '"Wiki":/projects/{pid}/wiki', has_sub: true },
     { name: 'members', label: 'Members', icon: 'group', module: null, link_pattern: '"Members":/projects/{pid}', has_sub: true },
     { name: 'attachments', label: 'Attachments', icon: 'attachment', module: null, link_pattern: null, has_sub: true },
-    { name: 'files', label: 'Files', icon: 'file', module: 'files', link_pattern: '"Files":/projects/{pid}/files' },
+    { name: 'files', label: 'Files', icon: 'file', module: 'files', link_pattern: '"Files":/projects/{pid}/files', has_sub: true },
     { name: 'documents', label: 'Documents', icon: 'document', module: 'documents', link_pattern: '"Documents":/projects/{pid}/documents' },
     { name: 'boards', label: 'Boards', icon: 'comments', module: 'boards', link_pattern: '"Boards":/projects/{pid}/boards' },
     { name: 'repository', label: 'Repository', icon: 'package', module: 'repository', link_pattern: '"Repository":/projects/{pid}/repository' },
@@ -622,7 +623,17 @@
         }
         return true;
       });
-      cb(filtered);
+
+      var seen = {};
+      var uniqueFiltered = filtered.filter(function (sp) {
+        var lbl = (sp.label || '').toLowerCase().trim();
+        if (seen[lbl]) {
+          return false;
+        }
+        seen[lbl] = true;
+        return true;
+      });
+      cb(uniqueFiltered);
     });
   }
 
@@ -951,6 +962,15 @@
       } else {
         cb(filterAndFormatAttachments(cache.attachments[location.pathname], q));
       }
+    } else if (normalized === 'files') {
+      if (!cache.files) cache.files = {};
+      if (!cache.files[pid]) {
+        loadFiles(pid, function () {
+          cb(filterAndFormatFiles(cache.files[pid], q));
+        });
+      } else {
+        cb(filterAndFormatFiles(cache.files[pid], q));
+      }
     } else {
       cb([]);
     }
@@ -1101,6 +1121,37 @@
     }
     cache.attachments[key] = [];
     cb();
+  }
+
+  function loadFiles(pid, cb) {
+    loadJSON('/projects/' + pid + '/files.json',
+      function (d) { cache.files[pid] = d.files || []; cb(); },
+      function ()   { cache.files[pid] = [];            cb(); }
+    );
+  }
+
+  function filterAndFormatFiles(filesList, q) {
+    var lq = q.toLowerCase().trim();
+    var filtered = filesList.filter(function (f) {
+      return !lq || (f.filename || '').toLowerCase().indexOf(lq) !== -1;
+    });
+    if (filtered.length === 0) {
+      return [{ label: 'Keine Dateien', disabled: true }];
+    }
+    return filtered.slice(0, 10).map(function (f) {
+      var isImg = /^image\//i.test(f.content_type || '');
+      var link = '';
+      if (isImg) {
+        if (isMarkdownEditor()) {
+          link = '![](attachment:' + f.filename + ')';
+        } else {
+          link = '!attachment:' + f.filename + '!';
+        }
+      } else {
+        link = 'attachment:' + f.filename;
+      }
+      return { icon: isImg ? 'image-png' : 'attachment', label: f.filename, sub: link, autotext: f.filename, link: link };
+    });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -1614,6 +1665,20 @@
           }
         }
       });
+    }
+
+    // Distinguish 'attachments' from 'files' if they resolve to the same label (e.g., both "Dateien" in German)
+    var filesSp = ALL_SUBPAGES.filter(function (sp) { return sp.name === 'files'; })[0];
+    var attachSp = ALL_SUBPAGES.filter(function (sp) { return sp.name === 'attachments'; })[0];
+    if (filesSp && attachSp && filesSp.label.toLowerCase().trim() === attachSp.label.toLowerCase().trim()) {
+      if (filesSp.label.toLowerCase().trim() === 'dateien') {
+        attachSp.label = 'Anhänge';
+        subpageLookup['anhänge'] = 'attachments';
+        subpageLookup['anhange'] = 'attachments';
+      } else {
+        attachSp.label = attachSp.label + ' (' + (urlSubpageKey || 'Local') + ')';
+        subpageLookup[attachSp.label.toLowerCase().trim()] = 'attachments';
+      }
     }
 
     if (urlSubpageKey) {
