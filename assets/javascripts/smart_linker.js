@@ -160,12 +160,16 @@
 
   function handleGoLeft() {
     if (activeCol === 3) {
-      st = 'subpages';
-      activeCol = 2;
-      selIdx3 = -1;
-      applyHL(3);
-      focusColumn(2);
-      goBackToSubpages();
+      if (st === 'anchors') {
+        goBackToWikiPages();
+      } else {
+        st = 'subpages';
+        activeCol = 2;
+        selIdx3 = -1;
+        applyHL(3);
+        focusColumn(2);
+        goBackToSubpages();
+      }
     } else if (activeCol === 2) {
       st = 'project';
       activeCol = 1;
@@ -173,6 +177,24 @@
       applyHL(2);
       focusColumn(1);
       goBackToProject();
+    }
+  }
+
+  function goBackToWikiPages() {
+    if (activeTa && tStart >= 0) {
+      var v = activeTa.value;
+      var hashIdx = v.indexOf('#', tStart);
+      var repl = '';
+      if (hashIdx !== -1) {
+        repl = v.substring(tStart, hashIdx);
+      } else {
+        repl = '>>' + curProj.identifier + '>' + getSubpageLabel('wiki') + '>' + (col2Items[selIdx2] ? col2Items[selIdx2].label : '');
+      }
+      activeTa.value = v.substring(0, tStart) + repl + v.substring(tEnd);
+      tEnd = tStart + repl.length;
+      activeTa.selectionStart = activeTa.selectionEnd = tEnd;
+      activeTa.dispatchEvent(new Event('input', { bubbles: true }));
+      activeTa.focus();
     }
   }
 
@@ -353,7 +375,17 @@
       var item = col3Items[selIdx3];
       if (item && curProj && curSubpage) {
         var txt = item.autotext || item.label || '';
-        repl = '>>' + curProj.identifier + '>' + getSubpageLabel(curSubpage) + '>' + txt;
+        if (st === 'anchors') {
+          var v = activeTa.value;
+          var hashIdx = v.indexOf('#', tStart);
+          if (hashIdx !== -1) {
+            repl = v.substring(tStart, hashIdx + 1) + txt;
+          } else {
+            return;
+          }
+        } else {
+          repl = '>>' + curProj.identifier + '>' + getSubpageLabel(curSubpage) + '>' + txt;
+        }
       } else {
         return;
       }
@@ -401,6 +433,14 @@
 
     var subpage = parts[1];
     var subitemQuery = parts[2] || '';
+    
+    if (findSubpageNormalized(subpage) === 'wiki' && subitemQuery.indexOf('#') !== -1) {
+      var hashIdx = subitemQuery.indexOf('#');
+      var pageTitle = subitemQuery.substring(0, hashIdx);
+      var anchorQuery = subitemQuery.substring(hashIdx + 1);
+      return { level: 'anchors', projId: projId, pageTitle: pageTitle, query: anchorQuery };
+    }
+    
     return { level: 'subitems', projId: projId, subpage: subpage, query: subitemQuery };
   }
 
@@ -1426,8 +1466,19 @@
   }
 
   function handleTab3() {
-    // Do nothing on Column 3 leaf items for Tab / ArrowRight
-    return;
+    var item = getSelectedItem(3);
+    if (!item || item.section || item.disabled) return;
+    
+    if (curSubpage === 'wiki' && st !== 'anchors') {
+      var ta = activeTa;
+      var v  = ta.value;
+      var repl = '>>' + curProj.identifier + '>' + getSubpageLabel(curSubpage) + '>' + item.label + '#';
+      ta.value = v.substring(0, tStart) + repl + v.substring(tEnd);
+      tEnd = tStart + repl.length;
+      ta.selectionStart = ta.selectionEnd = tEnd;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.focus();
+    }
   }
 
   function handleEnter1() {
@@ -1527,6 +1578,9 @@
     } else if (parsed.level === 'subitems') {
       st = 'subitems';
       resolveProjectAndSubpageAndRenderSubitems(parsed.projId, parsed.subpage, parsed.query);
+    } else if (parsed.level === 'anchors') {
+      st = 'anchors';
+      resolveProjectAndSubpageAndWikiPageAndRenderAnchors(parsed.projId, parsed.pageTitle, parsed.query);
     }
   }
 
@@ -2304,6 +2358,167 @@
         urlSubpage = foundSp.label;
       }
     }
+  }
+
+  /* ── Wiki Anchors Resolving & Rendering ──────────────────────────────────── */
+  var wikiPageContentCache = {};
+
+  function resolveProjectAndSubpageAndWikiPageAndRenderAnchors(projId, pageTitle, q) {
+    itemsQ = q;
+
+    if (!cache.projects) {
+      renderColumn(1, [{ label: t('loading_projects', 'Lade Projekte…'), disabled: true }], -1, false);
+      loadJSON('/projects.json?limit=100', function (d) {
+        cache.projects = d.projects || [];
+        resolveProjectAndSubpageAndWikiPageAndRenderAnchors(projId, pageTitle, q);
+      }, function () {
+        renderColumn(1, [{ label: t('loading_error', 'Fehler beim Laden'), disabled: true }], -1, false);
+      });
+      return;
+    }
+
+    var proj = cache.projects.filter(function (p) { return p.identifier === projId; })[0];
+    if (!proj) {
+      st = 'project';
+      renderProjectsList(projId);
+      return;
+    }
+
+    curProj = proj;
+    curSubpage = 'wiki';
+
+    var matchedProjIdx = -1;
+    var col1ItemsLocal = cache.projects.map(function (p, idx) {
+      if (p.identifier === projId) matchedProjIdx = idx;
+      return {
+        icon:     p.identifier === urlProjId ? 'checked' : 'folder',
+        label:    p.name,
+        sub:      p.identifier,
+        project:  p
+      };
+    });
+    selIdx1 = matchedProjIdx !== -1 ? matchedProjIdx : 0;
+    renderColumn(1, col1ItemsLocal, selIdx1, false);
+
+    if (!cache.wiki[projId]) {
+      loadWiki(projId, function () {
+        renderColumn2WikiPagesAndColumn3Anchors(projId, pageTitle, q);
+      });
+    } else {
+      renderColumn2WikiPagesAndColumn3Anchors(projId, pageTitle, q);
+    }
+  }
+
+  function renderColumn2WikiPagesAndColumn3Anchors(projId, pageTitle, q) {
+    var wikiPages = cache.wiki[projId] || [];
+
+    var matchedPageIdx = -1;
+    var col2ItemsLocal = wikiPages.map(function (p, idx) {
+      if (p.title.toLowerCase().trim() === pageTitle.toLowerCase().trim()) matchedPageIdx = idx;
+      var link = projId === urlProjId ? '[[' + p.title + ']]' : '[[' + projId + ':' + p.title + ']]';
+      return {
+        icon:       'wiki-page',
+        label:      p.title,
+        sub:        link,
+        link:       link,
+        hasSubmenu: true
+      };
+    });
+
+    selIdx2 = matchedPageIdx !== -1 ? matchedPageIdx : 0;
+    renderColumn(2, col2ItemsLocal, selIdx2, false);
+
+    activeCol = 3;
+    setPanelWidth(3);
+
+    loadWikiPageContent(projId, pageTitle, function (headings) {
+      var filtered = headings.filter(function (h) {
+        var lq = q.toLowerCase();
+        return !lq || h.title.toLowerCase().indexOf(lq) !== -1 || h.anchor.toLowerCase().indexOf(lq) !== -1;
+      });
+
+      var col3ItemsLocal = filtered.map(function (h) {
+        var link = '';
+        if (projId === urlProjId) {
+          link = '[[' + pageTitle + '#' + h.anchor + ']]';
+        } else {
+          link = '[[' + projId + ':' + pageTitle + '#' + h.anchor + ']]';
+        }
+        return {
+          icon:     'stats',
+          label:    h.title,
+          sub:      '#' + h.anchor,
+          autotext: h.anchor,
+          link:     link
+        };
+      });
+
+      if (col3ItemsLocal.length === 0) {
+        col3ItemsLocal = [{ label: q ? t('no_anchors', 'Keine Anker gefunden') : t('no_anchors_page', 'Keine Überschriften/Anker'), disabled: true }];
+      }
+
+      selIdx3 = findFirstSelectable(col3ItemsLocal, 3);
+      renderColumn(3, col3ItemsLocal, selIdx3, true);
+    });
+  }
+
+  function loadWikiPageContent(projId, pageTitle, cb) {
+    var cacheKey = projId + ':' + pageTitle;
+    if (wikiPageContentCache[cacheKey]) {
+      cb(wikiPageContentCache[cacheKey]);
+      return;
+    }
+
+    loadJSON('/projects/' + projId + '/wiki/' + encodeURIComponent(pageTitle.replace(/ /g, '_')) + '.json',
+      function (d) {
+        var text = (d.wiki_page && d.wiki_page.text) || '';
+        var headings = parseHeadings(text, window.REDMINE_FORMATTING || '');
+        wikiPageContentCache[cacheKey] = headings;
+        cb(headings);
+      },
+      function () {
+        wikiPageContentCache[cacheKey] = [];
+        cb([]);
+      }
+    );
+  }
+
+  function parseHeadings(text, formatter) {
+    if (!text) return [];
+    var lines = text.split(/\r?\n/);
+    var headings = [];
+    var isMd = formatter === 'markdown' || formatter === 'common_mark' || isMarkdownEditor();
+
+    lines.forEach(function (line) {
+      line = line.trim();
+      if (isMd) {
+        var m = line.match(/^#{1,6}\s+(.+)$/);
+        if (m) {
+          var title = m[1].trim();
+          var anchor = slugifyAnchor(title);
+          headings.push({ title: title, anchor: anchor });
+        }
+      } else {
+        var m = line.match(/^h([1-6])(?:\([^)]+\))?\.\s+(.+)$/);
+        if (m) {
+          var title = m[2].trim();
+          var anchor = slugifyAnchor(title);
+          headings.push({ title: title, anchor: anchor });
+        }
+      }
+    });
+
+    return headings;
+  }
+
+  function slugifyAnchor(text) {
+    var s = text.toLowerCase();
+    s = s.replace(/<[^>]+>/g, '');
+    s = s.replace(/[^\w\s\-]/g, '');
+    s = s.replace(/[\s_]+/g, '-');
+    s = s.replace(/\-+/g, '-');
+    s = s.replace(/^\-+|\-+$/g, '');
+    return s;
   }
 
   /* ── Init ── */
