@@ -1099,13 +1099,13 @@
       var link = '';
       if (isImg) {
         if (isMarkdownEditor()) {
-          link = '![](attachment:' + a.filename + ')';
+          link = '![](attachment:' + encodeURIComponent(a.filename) + ')';
         } else {
           link = '!attachment:' + a.filename + '!';
         }
       } else {
         if (isMarkdownEditor()) {
-          link = '[' + a.filename + '](attachment:' + a.filename + ')';
+          link = '[' + a.filename + '](attachment:' + encodeURIComponent(a.filename) + ')';
         } else {
           link = 'attachment:' + a.filename;
         }
@@ -1194,13 +1194,13 @@
       var link = '';
       if (isImg) {
         if (isMarkdownEditor()) {
-          link = '![](attachment:' + f.filename + ')';
+          link = '![](attachment:' + encodeURIComponent(f.filename) + ')';
         } else {
           link = '!attachment:' + f.filename + '!';
         }
       } else {
         if (isMarkdownEditor()) {
-          link = '[' + f.filename + '](attachment:' + f.filename + ')';
+          link = '[' + f.filename + '](attachment:' + encodeURIComponent(f.filename) + ')';
         } else {
           link = 'attachment:' + f.filename;
         }
