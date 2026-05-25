@@ -139,6 +139,8 @@
   width: 14px;
   height: 14px;
   display: block;
+  stroke: currentColor !important;
+  fill: none !important;
 }
 
 .sl-label {
