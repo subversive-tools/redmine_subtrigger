@@ -100,12 +100,7 @@
 
     macDetail.style.display = 'none';
     macDetail.textContent   = '';
-    selectedIndex = -1;
-
-    // Auto-select when query matches exactly one macro
-    if (filtered.length === 1 && filtered[0].name === query) {
-      selectedIndex = 0;
-    }
+    selectedIndex = 0;
 
     position(textarea);
     dropdown.style.display = 'block';
