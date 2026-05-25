@@ -1993,14 +1993,10 @@
   }
 
   function formatLink(title, path) {
-    var fullPath = path;
-    if (path.indexOf('/') === 0) {
-      fullPath = location.origin + path;
-    }
     if (isMarkdownEditor()) {
-      return '[' + title + '](' + fullPath + ')';
+      return '[' + title + '](' + path + ')';
     } else {
-      return '"' + title + '":' + fullPath;
+      return '"' + title + '":' + path;
     }
   }
 
