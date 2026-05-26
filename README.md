@@ -78,8 +78,8 @@ Type `@` at the start of a word. The member dropdown opens immediately (unlike R
 ## Configuration
 
 Administrators can configure the plugin under **Administration -> Plugins -> Subtrigger (Configure)**:
-- **Toggle Features**: Independently enable/disable macro autocomplete (`{{`), mention autocomplete patch (`@`), or the Smart Linker.
-- **Custom Trigger**: Customize the trigger characters for the Smart Linker (default is `>>`, but can be set to `<<` or any other key).
+- **Toggle Features**: Independently enable/disable macro autocomplete (`{{`), mention autocomplete patch (`@`), or the Smart Linker (`>>`).
+- **Custom Trigger**: Customize the trigger characters for the Smart Linker (default is `>>`, but can be set to any other key).
 
 ## How It Works
 
