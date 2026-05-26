@@ -13,7 +13,7 @@ A Redmine plugin that brings smart autocomplete and linking to every wiki text a
 - **`>>` — Smart Linker**: A cascading popover to build links to any internal objects without knowing the syntax:
   - **Hierarchical Project Navigation**: Indented subproject tree sorting with parent context retention
   - **Multi-Level Drill-Down Navigation**: Seamlessly drill down from Project $\rightarrow$ Section (Issues, Wiki, Members, Files, News, Documents, etc.) $\rightarrow$ Target Item $\rightarrow$ Sub-item / Wiki Anchor.
-  - **Real-Time Wiki Page Heading & Anchor Autocomplete**: Deep 4th level transition (`Wiki` $\rightarrow$ `Page` $\rightarrow$ `#anchor`) parsing page headings in real-time and dynamically converting headings to Redmine-compatible slugified anchors.
+  - **Wiki Page Heading & Anchor Autocomplete**: Deep 4th level transition (`Wiki` $\rightarrow$ `Page` $\rightarrow$ `#anchor`) that parses page headings on the fly to suggest Redmine-compatible slugified anchors.
   - **Project News Browsing & Autocomplete**: Complete News articles browsing and linking with comment counts (`news#ID` in Textile, `[Title](news:ID)` in Markdown).
   - **Smart Documents Integration**: Parses and matches project Documents dynamically by crawling `/projects/{project_id}/documents` HTML.
   - **Dynamic Third-Party Addon Support**: Automatically scrapes active Redmine `#main-menu` links on load to dynamically register and link third-party tabs (like DMSF, Questions, Checklists, etc.) in the subpages menu.
