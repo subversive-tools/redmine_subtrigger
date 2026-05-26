@@ -4,7 +4,7 @@
 ![Redmine](https://img.shields.io/badge/Redmine-5.0%20%7C%206.0-red.svg?logo=redmine)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-A Redmine plugin that brings smart autocomplete and linking to every wiki text area — macros, mentions, and a powerful multi-level column-style link builder.
+A Redmine plugin that enables quick access to Redmine objects and macros via trigger characters, contextual autocomplete, and an inline selection menu in any text field.
 
 > Built for teams who write a lot of Redmine text and want fast, discoverable links without remembering syntax.
 

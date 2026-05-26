@@ -14,7 +14,7 @@ require 'redmine'
 Redmine::Plugin.register :redmine_subtrigger do
   name        'Subtrigger'
   author      'Stefan Mischke'
-  description 'Trigger autocomplete and smart linking in all Redmine wiki areas — supporting macros ({{), @-mentions, and the Smart Linker for issues, wiki pages, members, e-mail, web and attachments.'
+  description 'Enables quick access to Redmine objects and macros via trigger characters, contextual autocomplete, and an inline selection menu in any text field.'
   version     '0.5.0'
   url         'https://github.com/subversive-tools/redmine_subtrigger'
   author_url  'https://github.com/modoq'
