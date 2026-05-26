@@ -40,16 +40,6 @@ All features work in **every wiki text area**: wiki pages, issue descriptions, i
 
 ## Usage
 
-### `{{` — Macro Autocomplete
-
-Type `{{` anywhere in a wiki text area. A dropdown appears listing all available macros with a short description. Use arrow keys to navigate, `Tab` or `Enter` to insert.
-
-The detail panel below the list shows the full macro description for the currently selected entry.
-
-### `@` — Instant Mention
-
-Type `@` at the start of a word. The member dropdown opens immediately (unlike Redmine's default which requires at least one character). Type to filter; only the first 10 members are shown.
-
 ### `>>` — Smart Linker
 
 Type `>>` after a space or at the start of a line. An ultra-compact multi-column panel opens, showing one active navigation column at a time (width 280px) and following your cursor.
@@ -65,25 +55,31 @@ You can either navigate options visually (using arrow keys or your mouse cursor)
 #### Wiki Anchors, News, Documents & Files
 
 - **Wiki Anchors**: Typing `#` after a Wiki page name or highlighting a page in Column 3 and pressing `Tab` triggers autocomplete for the page's headings.
-- **News, Documents & Files**: Integrates project news (with comment counts), documents (crawled dynamically), and files (via JSON API) for instant lookup and linking.
+- **News, Documents, Files etc**: Integrates project news (with comment counts), documents (crawled dynamically), and files (via JSON API) for instant lookup and linking.
 
 #### Dynamic Third-Party Addons
 
 The Smart Linker dynamically crawls the `#main-menu` navigation on load. Any third-party Redmine addon tab (e.g., DMSF, Questions, Checklists, etc.) will automatically appear as an option in the subpage list and can be searched and linked directly.
 
-#### Leaf Level Finalization
+#### Link Editing
 
-- **ArrowRight (`→`) / Tab**: On leaf items (Column 3 items, anchor items, or subpages in Column 2 that have no submenu like Overview, Calendar, Gantt, etc.), `Tab` and `ArrowRight` do nothing, keeping your typed query pristine.
-- **Enter / Return** (or mouse click): Instantly converts the query to the clean, finalized Textile/Markdown link and inserts it directly at the cursor, closing the panel.
+If the caret is inside any Markdown link, Textile link, double-bracket wiki link (`[[Page]]`), attachment shorthand (`attachment:file.ext`), or issue shorthand (`#123` or `project#123`), pressing `Tab` will trigger the Smart Linker.
 
-#### Round-trip Link Editing
+### `{{` — Macro Autocomplete
 
-If the caret is inside any Markdown link, Textile link, double-bracket wiki link (`[[Page]]`), attachment shorthand (`attachment:file.ext`), or issue shorthand (`#123` or `project#123`), pressing `Tab` while the panel is closed will automatically:
+Type `{{` anywhere in a wiki text area. A dropdown appears listing all available macros with a short description. Use arrow keys to navigate, `Tab` or `Enter` to insert.
 
-1. Scan and detect the link under the cursor.
-2. Replace it with the corresponding `>>` path query.
-3. Automatically look up project context (using the page URL, active menu items, or header breadcrumbs like `#header h1 a`).
-4. Re-open the Smart Linker right at that item's column with the search term pre-loaded!
+The detail panel below the list shows the full macro description for the currently selected entry.
+
+### `@` — Instant Mention
+
+Type `@` at the start of a word. The member dropdown opens immediately (unlike Redmine's default which requires at least one character). Type to filter; only the first 10 members are shown.
+
+## Configuration
+
+Administrators can configure the plugin under **Administration -> Plugins -> Subtrigger (Configure)**:
+- **Toggle Features**: Independently enable/disable macro autocomplete (`{{`), mention autocomplete patch (`@`), or the Smart Linker.
+- **Custom Trigger**: Customize the trigger characters for the Smart Linker (default is `>>`, but can be set to `<<` or any other key).
 
 ## How It Works
 
