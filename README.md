@@ -6,8 +6,6 @@
 
 A Redmine plugin that enables quick access to Redmine objects and macros via trigger characters, contextual autocomplete, and an inline selection menu in any text field.
 
-> Built for teams who write a lot of Redmine text and want fast, discoverable links without remembering syntax.
-
 ## Features
 
 - **`>>` — Smart Linker**: A cascading popover to build links to any internal objects without knowing the syntax:
@@ -78,6 +76,7 @@ Type `@` at the start of a word. The member dropdown opens immediately (unlike R
 ## Configuration
 
 Administrators can configure the plugin under **Administration -> Plugins -> Subtrigger (Configure)**:
+
 - **Toggle Features**: Independently enable/disable macro autocomplete (`{{`), mention autocomplete patch (`@`), or the Smart Linker (`>>`).
 - **Custom Trigger**: Customize the trigger characters for the Smart Linker (default is `>>`, but can be set to any other key).
 
